@@ -116,38 +116,18 @@ void doReceiver(){
 	}
 }
 
-void __debug_show_shm(){
-	int i=0;
-	for(i=0;i<MAX_MSQ_SIZE;i++){
-		printf("===================\n");
-		printf("msg queue%d:\n", i);
-		printf("id:%d, ttl:%d\n", shm_msg[i].sender_id, shm_msg[i].time_to_live);
-		printf("body:%s\n", shm_msg[i].body);
-	}
-	printf("--------------------\n");
-
-	printf("current message pointer:%d\n", shm_meta[0]);
-	printf("--------------------\n");
-
-	printf("id[%d]\n", shm_id[0]);
-	for(i=1;i<=MAX_TALKER_NUM;i++)printf("(%d) ", shm_id[i]);
-	printf("\n");
-	printf("--------------------\n");
-}
-
 void init(){
 	key_t shm_key = ftok("key", 0), sem_key = ftok("key", 1);
 	union semun sem_arg;
 
-	//sheared memory
+	/*sheared memory*/
 	shmid = shmget(shm_key, MAX_MSQ_SIZE*sizeof(struct message)+(MAX_TALKER_NUM+2)*sizeof(int), 0600|IPC_CREAT|IPC_EXCL);
 	if(shmid==-1) shmid = shmget(shm_key, MAX_MSQ_SIZE*sizeof(struct message)+(MAX_TALKER_NUM+2)*sizeof(int), 0);
-	//else init shared memory
 	shm_msg = (struct message *)shmat(shmid, NULL, 0);
 	shm_id = (int*)(shm_msg + MAX_MSQ_SIZE);
 	shm_meta = (int*)(shm_id + MAX_TALKER_NUM + 1);
 
-	//semaphore
+	/*semaphore*/
 	sem = semget(sem_key, MAX_TALKER_NUM + 4, 0600|IPC_CREAT|IPC_EXCL);
 	if(sem==-1) sem = semget(sem_key, MAX_TALKER_NUM + 4, 0);
 	else{ //init semaphore
@@ -157,7 +137,7 @@ void init(){
 		semctl(sem, 0, SETALL, sem_arg);
 	}
 
-	//check id
+	/*check id*/
 	int login_flag = 0, number_of_talkers;
 	semWait(ID);
 	number_of_talkers = shm_id[0];
@@ -177,7 +157,6 @@ void init(){
 	semSignal(IDX);
 
 	printf("id=%d, talkers=%d, msg#=%d\n", id, number_of_talkers, msg_idx);
-	// __debug_show_shm();
 }
 
 void clear(){
