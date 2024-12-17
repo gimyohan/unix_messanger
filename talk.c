@@ -1,4 +1,21 @@
-#include "headers.h"
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+#include<stdarg.h>
+#include<time.h>
+#include<unistd.h>
+#include<dirent.h>
+#include<fcntl.h>
+#include<ftw.h>
+#include<signal.h>
+#include<errno.h>
+#include<sys/stat.h>
+#include<sys/types.h>
+#include<sys/mman.h>
+#include<sys/ipc.h>
+#include<sys/msg.h>
+#include<sys/shm.h>
+#include<sys/sem.h>
 
 #define MAX_MSQ_SIZE 10
 #define MAX_BODY_SIZE (1<<10)
@@ -49,7 +66,7 @@ int semSignal(int num){
 }
 void doSender(){
 	int number_of_talkers, idx, i;
-	int id_list[MAX_TALKER_NUM], is_quit=0;
+	int id_list[MAX_TALKER_NUM];
 	while(1){
 		int n = read(0, body_buffer, MAX_BODY_SIZE-1);
 		body_buffer[n-1] = 0;
@@ -67,19 +84,13 @@ void doSender(){
 		}
 		shm_msg[idx].time_to_live = number_of_talkers = shm_id[0];
 		for(i=0;i<number_of_talkers;i++) semSignal(id_list[i]);
-		if(strcmp(body_buffer, "talk_quit")==0){
-			is_quit = 1;
-			semWait(ID);
-			shm_id[0]--; //after enter "talk_quit" do not receive any other messages immediately
-	        shm_id[id] = 0;
-			semSignal(ID);
-		}
+
 		semSignal(IDX);
 		
 		if(number_of_talkers==1){
 			printf("id=%d, talkers=%d, msg#=%d\n", id, number_of_talkers, ++idx==MAX_MSQ_SIZE?0:idx);
 		}
-		if(is_quit) break;
+		if(strcmp(body_buffer, "talk_quit")==0) break;
 	}
 }
 
@@ -164,6 +175,8 @@ void clear(){
 		semctl(sem, MAX_TALKER_NUM + 4, IPC_RMID);
 		return;
 	}
+	shm_id[0]--;
+	shm_id[id] = 0;
 
 	semSignal(ID);
 }
